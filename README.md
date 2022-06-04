@@ -1,10 +1,35 @@
 
-# Module `terraform-gogatekeeper`
+# Module `terraform-k3s-gogatekeeper`
+
+A Terraform module to deploy a gogatekeeper instance via helm on a kubernetes cluster. This module assumes that all you want is basic authentication and no complex authorization. Feel free to fork this repository and add your own customizations.
 
 Provider Requirements:
 * **helm (`hashicorp/helm`):** `>= 2.5.1`
 * **kubernetes (`hashicorp/kubernetes`):** `>= 2.0.2`
 * **random:** (any version)
+
+## Example Usage
+
+If you want to deploy a gogatekeeper instance for multiple services each with its own subdomain you can use:
+
+```hcl
+module "gogatekeeper" {
+  for_each = {
+    // Map of subdomain = kubernetes_service
+    "example" = kubernetes_service.example
+  }
+  source = "github.com/DevNico/terraform-k3s-gogatekeeper?ref=v0.0.1"
+
+  name      = "${each.value.metadata[0].name}-gatekeeper"
+  namespace = each.value.metadata[0].namespace
+
+  url           = "${each.key}.${var.domain}"
+  client_id     = local.kc_client_id     # Replace with your respective keycloak client id
+  client_secret = local.kc_client_secret # Replace with your respective keycloak secret
+  upstream_url  = "http://${each.value.metadata[0].name}.${each.value.metadata[0].namespace}.svc.cluster.local:${each.value.spec[0].port[0].port}"
+  discovery_url = local.kc_url           # Replace with your respective keycloak url
+}
+```
 
 ## Input Variables
 * `client_id` (required): The keycloak client id
